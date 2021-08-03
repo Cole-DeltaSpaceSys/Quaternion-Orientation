@@ -1,51 +1,69 @@
-#include "Orientation.h"
 #include <Wire.h>
+#include "BMI088.h"
+#include "Orientation.h"
 
 Orientation ori;
 
-double dt, currentTime, previousTime;
+// Accelerometer Register
+Bmi088Accel accel(Wire, 0x18);
 
-struct gyroCalibration {
-  double biasX, biasY, biasZ;
+// Gyroscope Register
+Bmi088Gyro gyro(Wire, 0x68);
+
+uint64_t currentTime = 0;
+uint64_t previousTime = 0;
+double dt;
+
+struct YPR
+{
+  double X, Y, Z;
 };
-gyroCalibration gyroCal;
+YPR ypr;
 
-void setup() {
-  Serial.begin(115200);
-  //initialization();
-  gyroBiasCompute();
-}
+void setup(void)
+{
+  Serial.begin(15200);
 
-void loop() {
-  currentTime = micros();
-  dt = ((currentTime - previousTime) / 1000000.);
-  previousTime = currentTime;
-    
-  gyro.readSensor();
-  ori.Update(/* GyroX */ - gyroCal.biasX, /* GyroY */ - gyroCal.biasY, /* GyroZ */ - gyroCal.biasZ, dt);
-  ori.toEuler();
-}
-
-void gyroBiasCompute () {
-  // Read initial data from gyroscopes
-  gyro.readSensor();
-    
-  double gyroXsum = 0;
-  double gyroYsum = 0;
-  double gyroZsum = 0;
-  
-  // # of iterations - Increase for more prescise results
-  const int calCount = 1600;
-
-  for(int i = 0; i < calCount; i++)  { 
-    while(!gyro.getDrdyStatus()) {}
-        
-    gyro.readSensor();  
-    gyroXsum += /* GyroX */;
-    gyroYsum += /* GyroY */;
-    gyroZsum += /* GyroZ */;
+  bool status;
+  status = accel.begin();
+  status = accel.setOdr(Bmi088Accel::ODR_400HZ_BW_40HZ);
+  status = accel.setRange(Bmi088Accel::RANGE_12G);
+  if (status < 0)
+  {
+    Serial.println("Accel Initialization Error");
+    while (1)
+    {
+    }
   }
-  gyroCal.biasX = gyroXsum / calCount;
-  gyroCal.biasY = gyroYsum / calCount;
-  gyroCal.biasZ = gyroZsum / calCount;
+  // Checking to see if the Teensy can communicate with the BMI088 gyroscopes
+  status = gyro.begin();
+  status = gyro.setOdr(Bmi088Gyro::ODR_400HZ_BW_47HZ);
+  status = gyro.setRange(Bmi088Gyro::RANGE_500DPS);
+  if (status < 0)
+  {
+    Serial.println("Gyro Initialization Error");
+    while (1)
+    {
+    }
+  }
+}
+
+void loop(void)
+{
+  currentTime = micros();
+  dt = ((double)(currentTime - previousTime) / 1000000.);
+  previousTime = currentTime;
+
+  gyro.readSensor();
+
+  ypr.X = (gyro.getGyroX_rads()); 
+  ypr.Y = (gyro.getGyroY_rads()); 
+  ypr.Z = (gyro.getGyroZ_rads()); 
+
+  ori.update(ypr.Z, ypr.Y, ypr.X, dt);
+  ori.toEuler();
+
+  Serial.print(ori.toDegrees(ori.yaw));
+  Serial.print(ori.toDegrees(ori.pitch));
+  Serial.println(ori.toDegrees(ori.roll));
 }
