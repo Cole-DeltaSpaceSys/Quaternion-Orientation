@@ -2,56 +2,50 @@
 #include "Quaternion.h"
 #include <math.h>
 
-#define beta 0.1f
+#define minNorm 1e-12
 
-Quaternion Quaternion::multiply(double yaw, double pitch, double roll)
+Quaternion Quaternion::toAxis(double rawZ, double rawY, double rawX, double dt)
 {
+    this->rawX = rawX;
+    this->rawY = rawY;
+    this->rawZ = rawZ;
+
+    // Calculating the norm
+    double quatNorm = sqrt(sq(rawX) + sq(rawY) + sq(rawZ));
+    quatNorm = max(abs(quatNorm), minNorm);
+
+    double theta = quatNorm * dt;
+
     Quaternion q;
-    q.w = 0.5 * (-x * roll - 0.5 * y * pitch - 0.5 * z * yaw);
-    q.x = 0.5 * (w * roll + 0.5 * y * yaw - 0.5 * z * pitch);
-    q.y = 0.5 * (w * pitch - 0.5 * x * yaw + 0.5 * z * roll);
-    q.z = 0.5 * (w * yaw + 0.5 * x * pitch - 0.5 * y * roll);
+    q.w = cos(theta / 2);
+    q.x = -(rawX / quatNorm) * sin(theta / 2);
+    q.y = -(rawY / quatNorm) * sin(theta / 2);
+    q.z = -(rawZ / quatNorm) * sin(theta / 2);
+
     return q;
 }
 
-Quaternion Quaternion::integrate(double dt)
+Quaternion Quaternion::multiply()
 {
+    double prevW, prevX, prevY, prevZ;
+
     Quaternion r;
-    r.w += w * dt;
-    r.x += x * dt;
-    r.y += y * dt;
-    r.z += z * dt;
+    prevW = r.w;
+    prevX = r.x;
+    prevY = r.y;
+    prevZ = r.z;
+
+    // Quaternion Multiplication
+    r.w = (w * prevW) - (x * prevX) - (y * prevY) - (z * prevZ);
+    r.x = (w * prevX) + (x * prevW) + (y * prevZ) - (z * prevY);
+    r.y = (w * prevY) - (x * prevZ) + (y * prevW) + (z * prevX);
+    r.z = (w * prevZ) + (x * prevY) - (y * prevX) + (z * prevW);
 
     return r;
-}
-
-Quaternion Quaternion::normalize()
-{
-    double norm = invSqrt(Sq(w) + Sq(x) + Sq(y) + Sq(z));
-    norm = max(abs(norm), 1e-12);
-
-    Quaternion a;
-    a.w = w * norm;
-    a.x = x * norm;
-    a.y = y * norm;
-    a.z = z * norm;
-    return a;
 }
 
 float Quaternion::Sq(float x)
 {
     float y = x * x;
-    return y;
-}
-
-float Quaternion::invSqrt(float x)
-{
-    float halfx = 0.5f * x;
-    float y = x;
-    long i = *(long *)&y;
-    i = 0x5f3759df - (i >> 1);
-    y = *(float *)&i;
-    y = y * (1.5f - (halfx * y * y));
-    y = y * (1.5f - (halfx * y * y));
     return y;
 }
