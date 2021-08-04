@@ -15,9 +15,8 @@ public:
     Quaternion() {}
     Quaternion(double w, double x, double y, double z) : w(w), x(x), y(y), z(z) {}
     Quaternion(const Quaternion &q) : w(q.w), x(q.x), y(q.y), z(q.z) {}
-    Quaternion multiply(double yaw, double pitch, double roll);
-    Quaternion integrate(double dt);
-    Quaternion normalize();
+    Quaternion toAxis(double rawX, double rawY, double rawZ, double dt);
+    Quaternion multiply();
 
     Quaternion operator*(float f)
     {
@@ -44,6 +43,7 @@ public:
 private:
     static float invSqrt(float x);
     static float Sq(float x);
+    double rawX, rawY, rawZ;
 };
 
 #endif
