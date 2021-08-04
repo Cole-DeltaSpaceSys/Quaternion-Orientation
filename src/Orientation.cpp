@@ -6,11 +6,10 @@
 Quaternion quat;
 Quaternion q;
 
-void Orientation::update(double yaw, double pitch, double roll, double dt)
+void Orientation::update(double gyroX, double gyroY, double gyroZ, double dt)
 {
-    quat.multiply(yaw, pitch, roll);
-    quat.integrate(dt);
-    quat.normalize();
+    quat.toAxis(gyroX, gyroY, gyroZ, dt);
+    quat.multiply();
 }
 
 void Orientation::toEuler()
